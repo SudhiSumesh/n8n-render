@@ -1,0 +1,695 @@
+{
+  "name": "JobApplier",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "v1/job-apply",
+        "responseMode": "lastNode",
+        "options": {
+          "allowedOrigins": "*",
+          "binaryPropertyName": "{   \"jobDescription\": \"Full JD text pasted here ...\",   \"sourceUrl\": \"https://jobs.example.com/123\"   // optional }"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -224,
+        -208
+      ],
+      "id": "65becd7e-381d-43a0-be99-dca9770a75d3",
+      "name": "Webhook",
+      "webhookId": "2d578c68-af6b-4109-a5ed-7ea5bd568ce5",
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"applicant_name\": \"Sumesh S\",\n  \"applicant_email\": \"sudhisumesh01@gmail.com\",\n  \"sender_name\":\"Sumesh S\",\n  \"resume_path\":\"file:///C:/Users/user/Documents/Sumesh_FullStack_Dev.pdf\",\n  \"apply_mode\":\"auto\",\n  \"applicant_mobile\":\"+919446938763\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        144,
+        -224
+      ],
+      "id": "c44c1207-7a51-4715-a4ad-cb4f01a90213",
+      "name": "user_info"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.prompt }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1376,
+        -464
+      ],
+      "id": "4cea5b5f-dea8-4f4c-b830-7fdf2cc06fa0",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-3.5-turbo",
+          "mode": "list",
+          "cachedResultName": "gpt-3.5-turbo"
+        },
+        "options": {
+          "responseFormat": "json_object"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2112,
+        -704
+      ],
+      "id": "fd23118d-6a31-4a74-9ea1-d5980a77ffdb",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "ukg0rXKYoshvimjN",
+          "name": "google-free-tier-account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Simple non-crypto hash function\nfunction simpleHash(str) {\n  let hash = 0;\n  for (let i = 0; i < str.length; i++) {\n    const chr = str.charCodeAt(i);\n    hash = ((hash << 5) - hash) + chr;\n    hash |= 0; // convert to 32bit integer\n  }\n  return Math.abs(hash).toString(16);\n}\n\nconst jdtxt = $input.first().json.jobDescription || \"\";\nconst emails = $input.first().json.hrEmails?.length ? $input.first().json.hrEmails : ['no-email'];\n\nreturn emails.map(email => ({\n  json: {\n    applicationId: simpleHash(jdtxt + '|' + email),\n    hrEmail: email,\n    jobTitle:$input.first().json.jobTitle ,\n    companyName:$input.first().json.companyName,\n    jobDescription: jdtxt,\n    sourceUrl:$input.first().json.sourceUrl\n  }\n}));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        -416
+      ],
+      "id": "46ebde2f-fe79-4076-b970-5dabd46b0055",
+      "name": "make_application_id"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7e3a4dce-7955-4b7f-81a1-05b45db9419e",
+              "name": "=prompt",
+              "value": "=You are a professional job application email writer. Your goal is to generate concise, personalized job application emails that highlight only the most relevant skills, not the entire job description.\n\nInput fields:\n- job_description: {{ $json.jobDescription }}\n- hr_email: {{ $json.hrEmail }}\n- job_title: {{ $json.jobTitle }}\n- company: {{ $json.companyName }}\n\nApplicant Info:\nName: {{ $('user_info').item.json.applicant_name }}\nMobile: {{ $('user_info').item.json.applicant_mobile }}\n\nBackground:\nProfessional Summary: Passionate Full Stack Developer with 1.5 years of professional experience, skilled in React.js, Node.js, and building scalable distributed systems. Strong focus on clean code, performance optimization, and immersive user experiences.\nTechnical Skills: Frontend (React.js, Next.js, Redux, TypeScript, Tailwind, Ant Design), Backend (Node.js, Express.js, REST APIs, JWT, Python/FastAPI), Databases (MongoDB, MySQL), Tools (Git, Jira, Postman, n8n, Appsmith, Bubble).\n\nConstraints:\n- Output only JSON, no extra commentary.\n- The JSON must have two keys: { \"subject\": \"<email subject>\", \"body\": \"<full plain-text email body>\" }.\n- Subject line must be professional yet catchy enough to grab HR’s attention.\n- Email body must be < 270 words, written in first person.\n- Only mention applicant’s skills if they are explicitly relevant to the JD.\n- End with closing signature where the applicant’s name is on a new line (not inline with any paragraph).\n- After the name, include the applicant’s mobile number on a separate line.\n\nGoal:\nGenerate a polished , recruiter-friendly application email that feels 100% human-written, emphasizes value for the company, and avoids bloating with the entire JD.\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1376,
+        -240
+      ],
+      "id": "c20cb709-605a-4dad-805e-65a562eb09a8",
+      "name": "prepare_prompt"
+    },
+    {
+      "parameters": {
+        "jsCode": "// input: items[0].json.jobDescription, items[0].json.sourceUrl\nconst jdRaw = $('Webhook').first().json.body.jobDescription || \"\";\nconst sourceUrl = $('Webhook').first().json.body.sourceUrl || \"\";\n\n// Normalize JD: remove extra spaces, collapse multiple newlines\nconst jd = jdRaw\n  .replace(/\\r/g, '')                  // remove carriage returns\n  .replace(/\\t+/g, ' ')                // replace tabs with single space\n  .replace(/ +/g, ' ')                 // collapse multiple spaces\n  .replace(/\\n{2,}/g, '\\n')            // collapse multiple blank lines\n  .trim();\n\nconst emailRegex = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}/g;\nconst emails = (jd.match(emailRegex) || []).filter((v, i, arr) => arr.indexOf(v) === i);\n\n// quick attempt to extract \"Job Title\" and \"Company\" heuristics:\nlet title = '';\nlet company = '';\nconst lines = jd.split(/\\n/).map(l => l.trim()).filter(Boolean);\n\nif (lines.length) {\n  title = lines[0].slice(0,200);\n\n  const compLine = lines.find(l => /company|about|organization|organization:/i.test(l));\n  if (compLine) {\n    company = compLine.replace(/(Company|About|Organization|Organization:)/i, '').trim().slice(0,200);\n  }\n}\n\nreturn [{\n  json: {\n    jobDescription: jd,\n    sourceUrl,\n    hrEmails: emails,\n    jobTitle: title,\n    companyName: company ?? '',\n    foundEmailCount: emails.length\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        -240
+      ],
+      "id": "25c0b377-d869-49e6-8696-0b518795279c",
+      "name": "extract_emails_and_meta_data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "49fc9222-0d51-4237-abe6-8c0556038129",
+              "leftValue": "={{ $json.hrEmail }}",
+              "rightValue": "no-email",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1088,
+        -400
+      ],
+      "id": "298a7818-67b4-4979-b97d-2d47f908b4ce",
+      "name": "check_hr_mail"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e7e480c0-1eeb-4335-acc1-aa5ac5d4f0c2",
+              "leftValue": "={{ $('user_info').item.json.apply_mode }}",
+              "rightValue": "auto",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1680,
+        -128
+      ],
+      "id": "52e52a02-b80b-4b95-823b-31567fdd0c55",
+      "name": "check_mode"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('check_hr_mail').item.json.hrEmail }}",
+        "subject": "={{ $json.ai.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.ai.body }}",
+        "options": {
+          "appendAttribution": false,
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          },
+          "senderName": "={{ $('user_info').item.json.sender_name }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2304,
+        -288
+      ],
+      "id": "6b58fd06-e015-489d-9765-ee74cc051d3c",
+      "name": "Send Mail",
+      "webhookId": "6603c39d-3d2b-47f3-90e7-c44240c2c061",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "fyzl0uGu6BJvZE81",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://drive.google.com/uc?export=download&id=1wSjVZpM53tKTSve5x67HEPcnpYNeuaUR",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2032,
+        -288
+      ],
+      "id": "9a75f38b-b77e-4626-9432-966517b52b1a",
+      "name": "get_resume"
+    },
+    {
+      "parameters": {
+        "jsCode": "let text = $input.first().json.output  || '';\n// strip triple backticks and any leading/trailing whitespace\ntext = text.replace(/```/g, '').trim();\n\n// try to parse JSON; some LLMs can wrap JSON in markdown; fallback: find first \"{\" and last \"}\" slice\nlet jsonstr = text;\ntry {\n  if (!jsonstr.trim().startsWith('{')) {\n    const start = jsonstr.indexOf('{');\n    const end = jsonstr.lastIndexOf('}');\n    jsonstr = jsonstr.substring(start, end + 1);\n  }\n  const parsed = JSON.parse(jsonstr);\n  return [{ json: {...$input.first().json, ai: parsed} }];\n} catch(e) {\n  // fallback: store raw body and mark error\n  return [{ json: { ai: {subject: '', body: text}, aiParseError: true } }];\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        -464
+      ],
+      "id": "58b0ba4e-74ae-425e-baa8-d89478762a90",
+      "name": "format_response"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"error\": true,\n  \"message\": \"hr email missing\",\n  \"success\":false\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1136,
+        0
+      ],
+      "id": "93a384c2-b97d-4d3b-8513-845d9104cf5b",
+      "name": "return error"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"error\": true,\n  \"success\":false,\n  \"message\": \"manual mode not supported\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1888,
+        -32
+      ],
+      "id": "a85ae6dc-2e88-400a-ac7b-037d8535bdc1",
+      "name": "manual"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1376,
+        -608
+      ],
+      "id": "06072458-e43b-4a53-9b07-fb844ac29fcb",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "0Li7eikJssSAaZow",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/139mCLvZxHgmGWFXuURK2QZEj3Kln_hj7gquNxrdUdvw/edit?usp=drive_link",
+          "__regex": "https:\\/\\/(?:drive|docs)\\.google\\.com(?:\\/.*|)\\/d\\/([0-9a-zA-Z\\-_]+)(?:\\/.*|)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Job Applications",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/139mCLvZxHgmGWFXuURK2QZEj3Kln_hj7gquNxrdUdvw/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $now.format(\"YYYY-MM-DD HH:mm:ss\") }}",
+            "Company": "={{ $('make_application_id').item.json.companyName }}",
+            "Job Title": "={{ $('make_application_id').item.json.jobTitle }}",
+            "HR Email": "={{ $('make_application_id').item.json.hrEmail }}",
+            "Subject": "={{ $('get_resume').item.json.ai.subject }}",
+            "Status": "={{ $json.labelIds[0] }}",
+            "Notes": "=ApplicationID : {{ $('make_application_id').item.json.applicationId }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Job Title",
+              "displayName": "Job Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "HR Email",
+              "displayName": "HR Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Subject",
+              "displayName": "Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2480,
+        -288
+      ],
+      "id": "207fe81f-3945-4b6a-a852-1dd9a83c073f",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "KjrGANE6sjEn8kGW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"success\": true,\n  \"error\": null,\n  \"comapny\":\"{{ $('extract_emails_and_meta_data').item.json.companyName }}\",\n  \"jobTitle\":\"{{ $('extract_emails_and_meta_data').item.json.jobTitle }}\",\n  \"HREmail\":\"{{ $('extract_emails_and_meta_data').item.json.hrEmails[0] }}\",\n  \"message\":\"Your Job application submited successfully\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2688,
+        -288
+      ],
+      "id": "9b10ad46-df52-4fc4-a6cd-42c7e7926d48",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4e94d337-160f-4b90-95f7-eb13266e6bba",
+              "leftValue": "={{ $json.jobDescription }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        848,
+        -416
+      ],
+      "id": "cde73fee-0c45-4c70-88f4-ecb342048b51",
+      "name": "check_jd"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"error\": true,\n  \"success\": false,\n  \"message\":\"Job Description is required\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        816,
+        -16
+      ],
+      "id": "b072e131-ad37-4da5-9c13-fe8b35cb2ff9",
+      "name": "Edit Fields1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "user_info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "user_info": {
+      "main": [
+        [
+          {
+            "node": "extract_emails_and_meta_data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "format_response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "make_application_id": {
+      "main": [
+        [
+          {
+            "node": "check_jd",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "prepare_prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extract_emails_and_meta_data": {
+      "main": [
+        [
+          {
+            "node": "make_application_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_hr_mail": {
+      "main": [
+        [
+          {
+            "node": "prepare_prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "return error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_mode": {
+      "main": [
+        [
+          {
+            "node": "get_resume",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "manual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_resume": {
+      "main": [
+        [
+          {
+            "node": "Send Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format_response": {
+      "main": [
+        [
+          {
+            "node": "check_mode",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Mail": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "return error": {
+      "main": [
+        []
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_jd": {
+      "main": [
+        [
+          {
+            "node": "check_hr_mail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": -1
+  },
+  "versionId": "bcc49fd4-5ed4-4680-aea0-c0f7d7cf6486",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1e947f5b48e2120329f5573ccd1237caedd19f141c02eee23bf25019ce405aa4"
+  },
+  "id": "nikRvAOpyUFC6UJb",
+  "tags": []
+}
